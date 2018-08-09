@@ -24,7 +24,7 @@ class Prepper(object):
     """
     Abstract class for ImagePrep and ArrayPrep to create directories of images
     or arrays for keras DataGenerators
-
+    
     Input:
     -------
     input dictionary from ImageDict:
@@ -618,4 +618,3 @@ def chopper(img, dir_path, size):
     except ValueError:
         # numpy stack error for empty channels, skip image
         pass
-
