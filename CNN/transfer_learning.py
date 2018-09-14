@@ -27,7 +27,7 @@ NUM_EPOCHS = 20
 NUM_WORKERS = 8
 N_GPU = torch.cuda.device_count()
 USE_GPU = torch.cuda.is_available()
-BATCH_SIZE = 256 * N_GPU
+BATCH_SIZE = 32 * N_GPU
 LEARNING_RATE = 1e-5
 VERBOSE = True
 
