@@ -42,12 +42,10 @@ def load_model(weights):
 
     Returns:
     --------
-    model with loaded state-dicti
- 
- 
+    model with loaded state-dictionary
     """
     model = resnet.resnet18(num_classes=8)
-    return model_utils.load_model_weights(model, weights, strip_keys=False)
+    return model_utils.load_model_weights(model, weights)
 
 
 def freeze_model_weights(model):
@@ -232,7 +230,9 @@ def train(model, criterion, optimizer, lr_scheduler, data_dir, lr):
                 json.dump(history, f, indent=4)
             
     time_elapsed = time.time() - time_at_start
-    print("Training complete in {:.0f}m {:.0f}s".format(time_elapsed // 60, time_elapsed % 60))
+    print("Training complete in {:.0f}m {:.0f}s".format(
+        time_elapsed // 60, time_elapsed % 60)
+    )
     print("Best validation accuracy: {:.4f}".format(best_acc))
 
 
@@ -243,8 +243,8 @@ def finetune_model(model, lr=1e-5):
     optimizer = torch.optim.Adam(
         filter(lambda p: p.requires_grad, model.parameters()), lr=lr
     )
-    train(model, criterion, optimizer, exp_lr_schedular, data_dir=DATA_DIR, lr=lr)
-
+    train(model, criterion, optimizer, exp_lr_schedular,
+          data_dir=DATA_DIR, lr=lr)
 
 
 def main():
