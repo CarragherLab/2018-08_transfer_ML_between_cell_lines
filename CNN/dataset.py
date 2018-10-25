@@ -2,36 +2,6 @@
 author: Scott Warchal
 date: 2018-04-24
 
-Custom Dataset for structured directory of numpy arrays to work
-with torch.utils.DataLoader
-
-Directory structure should mirror that of ImageFolder. i.e:
-
-    all_data
-    ├── test
-    │   ├── actin
-    │   ├── aurora
-    │   ├── dna_damaging
-    │   ├── kinase
-    │   ├── microtubule
-    │   ├── protein_deg
-    │   ├── protein_synth
-    │   └── statin
-    └── train
-        ├── actin
-        ├── aurora
-        ├── dna_damaging
-        ├── kinase
-        ├── microtubule
-        ├── protein_deg
-        ├── protein_synth
-        └── statin
-
-So you would have a CellDataset for train and test separately.
-Storing these in a dicionary would be the sensible thing to do. e.g:
-
-    path = "/path/to/all_data"
-    datasets = {x: CellDataset(os.path.join(path, x) for x in ["train", "test])}
 """
 
 
@@ -41,10 +11,43 @@ import numpy as np
 from skimage import transform as ski_transform
 import torch
 from torch import Tensor
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
+import pandas as pd
 
 
-class CellDataset(torch.utils.data.Dataset):
+class CellDataset(Dataset):
+    """
+    Custom Dataset for structured directory of numpy arrays to work
+    with torch.utils.DataLoader
+
+    Directory structure should mirror that of ImageFolder. i.e:
+
+        all_data
+        ├── test
+        │   ├── actin
+        │   ├── aurora
+        │   ├── dna_damaging
+        │   ├── kinase
+        │   ├── microtubule
+        │   ├── protein_deg
+        │   ├── protein_synth
+        │   └── statin
+        └── train
+            ├── actin
+            ├── aurora
+            ├── dna_damaging
+            ├── kinase
+            ├── microtubule
+            ├── protein_deg
+            ├── protein_synth
+            └── statin
+
+    So you would have a CellDataset for train and test separately.
+    Storing these in a dicionary would be the sensible thing to do. e.g:
+
+        path = "/path/to/all_data"
+        datasets = {x: CellDataset(os.path.join(path, x) for x in ["train", "test])}
+    """
 
     def __init__(self, data_dir, transforms=None, model="resnet",
                  normalise=False):
@@ -110,4 +113,46 @@ class CellDataset(torch.utils.data.Dataset):
         return Tensor(img).permute(2, 0, 1)
 
 
+
+
+class CSVDataset(Dataset):
+    """
+    Dataset from CSV file
+    """
+
+    def __init__(self, data_dir, csv_path, model="resnet", transforms=None):
+        self.data_dir = data_dir
+        self.csv_path = csv_path
+        self.model = model
+        self.transforms = transforms
+        self.dataframe = pd.read_csv(csv_path)
+
+    def __len__(self):
+        return self.csv_path.shape[0]
+
+    def __getitem__(self, index):
+        row = self.dataframe.iloc[index]
+        image_id = row["id"]
+        image = self.read_image(image_id)
+        if self.transforms is not None:
+            image = self.transforms(image)
+        image = self.reshape(image)
+        label = row["MoA"]
+        return image, label
+
+    def read_image(self, img_id):
+        img_path = os.path.join(self.data_dir, "{}.npy".format(img_id))
+        return np.load(img_path)
+
+    def reshape(self, image):
+        # reshape for a particular model as the
+        # models have different expected image dimensions
+        if self.model == "resnet":
+            image_size = (244, 244, 5)
+        elif self.model == "alexnet":
+            image_size = (224, 224, 5)
+        # resize image to from 300*300*5 => image_size, also converts to float
+        image = ski_transform.resize(image, image_size, mode="reflect")
+        # reshape from width*height*channel => channel*width*height
+        return Tensor(image).permute(2, 0, 1)
 
