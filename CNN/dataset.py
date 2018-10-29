@@ -128,6 +128,7 @@ class CSVDataset(Dataset):
             self.dataframe = csv
         else:
             raise ValueError("csv needs to be a path to a csv or a pd.DataFrame")
+        self.label_store = self.create_label_store()
 
     def __len__(self):
         return self.dataframe.shape[0]
@@ -140,7 +141,12 @@ class CSVDataset(Dataset):
             image = self.transforms(image)
         image = self.reshape(image)
         label = row["MoA"]
-        return image, label
+        label_index = self.label_store[label]
+        return image, label_index
+
+    def create_label_store(self):
+        unique_labels = sorted(list(self.dataframe.MoA.unique()))
+        return {l: i for i, l in enumerate(unique_labels)}
 
     def read_image(self, img_id):
         img_path = os.path.join(self.data_dir, "{}.npy".format(img_id))
