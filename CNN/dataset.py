@@ -4,7 +4,6 @@ date: 2018-04-24
 
 """
 
-
 import glob
 import os
 import numpy as np
@@ -113,22 +112,25 @@ class CellDataset(Dataset):
         return Tensor(img).permute(2, 0, 1)
 
 
-
-
 class CSVDataset(Dataset):
     """
     Dataset from CSV file
     """
-
-    def __init__(self, data_dir, csv_path, model="resnet", transforms=None):
+    def __init__(self, data_dir, csv, model="resnet", transforms=None):
         self.data_dir = data_dir
-        self.csv_path = csv_path
         self.model = model
         self.transforms = transforms
-        self.dataframe = pd.read_csv(csv_path)
+        if isinstance(csv, "str"):
+            # then csv is a filepath, and read in as a dataframe
+            self.dataframe = pd.read_csv(csv)
+        elif isinstance(csv, pd.DataFrame):
+            # then already a dataframe, use as-is
+            self.dataframe = csv
+        else:
+            raise ValueError("csv needs to be a path to a csv or a pd.DataFrame")
 
     def __len__(self):
-        return self.csv_path.shape[0]
+        return self.dataframe.shape[0]
 
     def __getitem__(self, index):
         row = self.dataframe.iloc[index]
