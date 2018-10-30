@@ -116,7 +116,7 @@ class CSVDataset(Dataset):
     """
     Dataset from CSV file
     """
-    def __init__(self, data_dir, csv, model="resnet", transforms=None)
+    def __init__(self, data_dir, csv, model="resnet", transforms=None):
         """
         data_dir: string
         csv: string or pandas.DataFrame
@@ -126,7 +126,7 @@ class CSVDataset(Dataset):
         self.data_dir = data_dir
         self.model = model
         self.transforms = transforms
-        if isinstance(csv, "str"):
+        if isinstance(csv, str):
             # then csv is a filepath, and read in as a dataframe
             self.dataframe = pd.read_csv(csv)
         elif isinstance(csv, pd.DataFrame):
