@@ -116,7 +116,13 @@ class CSVDataset(Dataset):
     """
     Dataset from CSV file
     """
-    def __init__(self, data_dir, csv, model="resnet", transforms=None):
+    def __init__(self, data_dir, csv, model="resnet", transforms=None)
+        """
+        data_dir: string
+        csv: string or pandas.DataFrame
+        model: string
+        transforms: pytorch transform
+        """
         self.data_dir = data_dir
         self.model = model
         self.transforms = transforms
@@ -151,6 +157,24 @@ class CSVDataset(Dataset):
     def read_image(self, img_id):
         img_path = os.path.join(self.data_dir, "{}.npy".format(img_id))
         return np.load(img_path)
+
+    def equalise_groups(self, grouping):
+        """
+        Undersample over-represented classes.
+
+        Parameters:
+        -----------
+        grouping: string or list of string
+            column(s) with which to group classes
+
+        Returns:
+        --------
+        nothing, overwrites self.dataframe
+        """
+        grouped = self.dataframe.groupby(grouping)
+        smallest = grouped.size().min()
+        new_df = grouped.apply(lambda x: x.sample(n=smallest))
+        self.dataframe = new_df.reset_index(drop=True)
 
     def reshape(self, image):
         # reshape for a particular model as the
