@@ -143,9 +143,9 @@ class CSVDataset(Dataset):
         row = self.dataframe.iloc[index]
         image_id = row["id"]
         image = self.read_image(image_id)
+        image = self.reshape(image)
         if self.transforms is not None:
             image = self.transforms(image)
-        image = self.reshape(image)
         label = row["MoA"]
         label_index = self.label_store[label]
         return image, label_index
