@@ -116,10 +116,12 @@ class CSVDataset(Dataset):
     """
     Dataset from CSV file
     """
-    def __init__(self, data_dir, csv, model="resnet", transforms=None):
+    def __init__(self, data_dir, csv, complete_csv,
+                 model="resnet", transforms=None):
         """
         data_dir: string
         csv: string or pandas.DataFrame
+        complete_csv string or pandas.DataFrame
         model: string
         transforms: pytorch transform
         """
@@ -134,6 +136,14 @@ class CSVDataset(Dataset):
             self.dataframe = csv
         else:
             raise ValueError("csv needs to be a path to a csv or a pd.DataFrame")
+        if isinstance(complete_csv, str):
+            # then csv is a filepath, and read in as a dataframe
+            self.complete_dataframe = pd.read_csv(complete_csv)
+        elif isinstance(complete_csv, pd.DataFrame):
+            # then already a dataframe, use as-is
+            self.complete_dataframe = complete_csv
+        else:
+            raise ValueError("complete_csv needs to be a path to a csv or a pd.DataFrame")
         self.label_store = self.create_label_store()
 
     def __len__(self):
@@ -148,17 +158,18 @@ class CSVDataset(Dataset):
             image = self.transforms(image)
         label = row["MoA"]
         label_index = self.label_store[label]
-        return image, label_index
+        parent_img = row["img_id"]
+        return image, label_index, parent_img
 
     def create_label_store(self):
-        unique_labels = sorted(list(self.dataframe.MoA.unique()))
+        unique_labels = sorted(list(self.complete_dataframe.MoA.unique()))
         return {l: i for i, l in enumerate(unique_labels)}
 
     def read_image(self, img_id):
         img_path = os.path.join(self.data_dir, "{}.npy".format(img_id))
         return np.load(img_path)
 
-    def equalise_groups(self, grouping):
+    def equalise_groups(self, grouping, under_sample=True, n=None):
         """
         Undersample over-represented classes.
 
@@ -166,14 +177,32 @@ class CSVDataset(Dataset):
         -----------
         grouping: string or list of string
             column(s) with which to group classes
+        under_sample: Boolean
+            Whether to undersample over-represented classes.
+            If False then sample classes will be equalised so they all contain `n` samples.
+            If False, then samples will be sampled with replacement, if True then samples
+            will be sampled without replacement.
+        n: int or None
+            The number of samples in each group if `under_sample` is False.
+            If left as `None`, then `n` will be set to the number of samples
+            in the largest group.
 
         Returns:
         --------
         nothing, overwrites self.dataframe
         """
         grouped = self.dataframe.groupby(grouping)
-        smallest = grouped.size().min()
-        new_df = grouped.apply(lambda x: x.sample(n=smallest))
+        # if under_sampling then we don't need to sample with replacement
+        # otherwise we need to sample with replacement
+        replace = not under_sample
+        if under_sample:
+            # use the sample numbers from the smallest group
+            n = grouped.size().min()
+        else:
+            # set n to the maximum group size if n is not supplied
+            n = grouped.size().max() if n is None else n
+        # sample groups and overwrite self.dataframe in place
+        new_df = grouped.apply(lambda x: x.sample(n=n, replace=replace))
         self.dataframe = new_df.reset_index(drop=True)
 
     def reshape(self, image):
